@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Checklist de Caminhão — PWA + Fotos</title>
+  <meta name="theme-color" content="#0ea5e9">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <style>
+    :root { --bg:#0b1220; --card:#111827; --muted:#6b7280; --text:#e5e7eb; --accent:#0ea5e9; --ok:#22c55e; --bad:#ef4444; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji"; background:linear-gradient(180deg,#0b1220,#0a0f1a); color:var(--text); }
+    .wrap { max-width:960px; margin:0 auto; padding:16px; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:8px; position:sticky; top:0; background:rgba(11,18,32,.8); backdrop-filter: blur(6px); padding:12px 16px; border-bottom:1px solid #1f2937; z-index:5; }
+    .brand { display:flex; align-items:center; gap:10px; font-weight:700; letter-spacing:.3px; }
+    .chip { padding:2px 8px; border-radius:999px; background:#0b2540; color:#93c5fd; border:1px solid #1f3b63; font-size:12px; }
+    button, select, input, textarea { font:inherit; color:inherit; }
+    .btn { border:1px solid #273449; background:#0b2540; padding:10px 14px; border-radius:12px; cursor:pointer; }
+    .btn:hover { background:#0d2d4f; }
+    .btn.primary { background:var(--accent); border-color:transparent; color:#00131f; font-weight:700; }
+    .btn.good { background:var(--ok); border-color:transparent; color:#01200f; font-weight:700; }
+    .btn.bad { background:var(--bad); border-color:transparent; color:#280303; font-weight:700; }
+    .grid { display:grid; gap:12px; }
+    @media(min-width:700px){ .grid.cols-2{ grid-template-columns:1fr 1fr; } }
+    .card { background:var(--card); border:1px solid #1f2937; border-radius:16px; padding:14px; }
+    label { font-size:13px; color:#bfc9d6; display:block; margin-bottom:6px; }
+    input[type="text"], input[type="number"], input[type="date"], input[type="time"], textarea, select { width:100%; background:#0b2540; border:1px solid #273449; border-radius:12px; padding:10px 12px; outline:none; }
+    textarea { min-height:90px; resize:vertical; }
+    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .pill { padding:6px 10px; border-radius:999px; background:#0b2540; border:1px solid #273449; font-size:12px; }
+    .center { text-align:center; }
+    .hide { display:none !important; }
+    .table { width:100%; border-collapse: collapse; }
+    .table th, .table td { padding:10px; border-bottom:1px solid #1f2937; text-align:left; font-size:14px; }
+    .table tr:hover { background:#0e192b; }
+    .stat { display:flex; gap:8px; align-items:center; padding:10px 12px; border:1px solid #22314a; border-radius:12px; background:#0b2540; }
+    .muted { color:var(--muted); }
+    .tag-ok { color:#10b981; background:rgba(16,185,129,.1); border:1px solid rgba(16,185,129,.25); }
+    .tag-bad { color:#f87171; background:rgba(248,113,113,.1); border:1px solid rgba(248,113,113,.25); }
+    .tag { padding:2px 8px; border-radius:999px; font-weight:600; font-size:12px; display:inline-block; }
+    .footnote { font-size:12px; color:#9ca3af; }
+    .hr { height:1px; background:#1f2937; margin:10px 0; }
+    .thumbs { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    .thumbs img { width:72px; height:72px; object-fit:cover; border-radius:10px; border:1px solid #273449; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 16V8a2 2 0 012-2h10a2 2 0 012 2v8m-14 0h14m-14 0l-1.5 3M17 16l1.5 3M6 16V9m4 7V9m4 7V9" stroke="#93c5fd" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Checklist de Caminhão
+      <span class="chip" id="roleChip">desconectado</span>
+    </div>
+    <div class="row">
+      <button class="btn" id="btnInstall" style="display:none">Instalar app</button>
+      <button class="btn" id="btnSignOut" title="Sair" style="display:none">Sair</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <!-- LOGIN / CADASTRO -->
+    <section id="authView" class="card">
+      <h2>Entrar</h2>
+      <p class="muted">Use e-mail e senha. O primeiro login cria seu usuário. Um administrador poderá alterar seu papel para <b>gestor</b>.</p>
+      <div class="grid cols-2">
+        <div>
+          <label>E-mail</label>
+          <input id="email" type="email" placeholder="ex: motorista@empresa.com" />
+        </div>
+        <div>
+          <label>Senha</label>
+          <input id="password" type="password" placeholder="••••••••" />
+        </div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn primary" id="btnLogin">Entrar</button>
+        <button class="btn" id="btnRegister" title="Cria uma nova conta">Registrar</button>
+      </div>
+      <div class="footnote" style="margin-top:8px">Dica: crie contas separadas para motoristas e para o patrão/gestor.</div>
+    </section>
+
+    <!-- VIEW MOTORISTA -->
+    <section id="driverView" class="hide">
+      <div class="card">
+        <h2>Checklist Pré-Viagem</h2>
+        <div class="grid cols-2">
+          <div>
+            <label>Placa do veículo</label>
+            <input id="placa" type="text" placeholder="ABC1D23" />
+          </div>
+          <div>
+            <label>Hodômetro (km)</label>
+            <input id="hodometro" type="number" inputmode="numeric" placeholder="123456" />
+          </div>
+          <div>
+            <label>Data</label>
+            <input id="data" type="date" />
+          </div>
+          <div>
+            <label>Hora</label>
+            <input id="hora" type="time" />
+          </div>
+        </div>
+        <div class="hr"></div>
+        <div class="grid cols-2" id="checks">
+          <!-- switches gerados via JS -->
+        </div>
+        <div class="hr"></div>
+        <label>Observações</label>
+        <textarea id="obs" placeholder="Descreva qualquer problema, ruído, vazamento, luz acesa no painel..."></textarea>
+
+        <div class="hr"></div>
+        <div>
+          <label>Fotos do problema (até 5)</label>
+          <input id="fotos" type="file" accept="image/*" capture="environment" multiple />
+          <div class="thumbs" id="thumbs"></div>
+        </div>
+
+        <div class="row" style="margin-top:10px; justify-content:space-between;">
+          <div class="row">
+            <span class="pill">Status: <b id="statusLabel">A avaliar</b></span>
+          </div>
+          <div class="row">
+            <button class="btn bad" id="btnReprovado" type="button">Reprovar</button>
+            <button class="btn good" id="btnAprovado" type="button">Aprovar</button>
+            <button class="btn primary" id="btnEnviar" type="button">Enviar checklist</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Meus últimos envios</h3>
+        <table class="table" id="myTable">
+          <thead>
+            <tr>
+              <th>Data</th><th>Placa</th><th>Status</th><th>Visualizar</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- VIEW ADMIN -->
+    <section id="adminView" class="hide">
+      <div class="card">
+        <h2>Painel do Gestor</h2>
+        <div class="grid cols-2">
+          <div>
+            <label>Filtrar por placa</label>
+            <input id="fPlaca" type="text" placeholder="ex: ABC1D23" />
+          </div>
+          <div>
+            <label>Filtrar por status</label>
+            <select id="fStatus">
+              <option value="">Todos</option>
+              <option value="APROVADO">Aprovado</option>
+              <option value="REPROVADO">Reprovado</option>
+            </select>
+          </div>
+        </div>
+        <div class="row" style="margin-top:8px; justify-content:space-between;">
+          <div class="row" id="statsRow"></div>
+          <div class="row">
+            <button class="btn" id="btnRefresh">Atualizar</button>
+            <button class="btn" id="btnExport">Exportar CSV</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Checklists</h3>
+        <table class="table" id="adminTable">
+          <thead>
+            <tr>
+              <th>Data</th><th>Placa</th><th>Motorista</th><th>Status</th><th>Ver</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>Gerenciar usuários</h3>
+        <div class="grid cols-2">
+          <div>
+            <label>UID do usuário</label>
+            <input id="uidRole" type="text" placeholder="Cole o UID" />
+          </div>
+          <div>
+            <label>Papel</label>
+            <select id="selRole">
+              <option value="driver">driver</option>
+              <option value="admin">admin</option>
+            </select>
+          </div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn" id="btnSetRole">Salvar papel</button>
+          <span class="footnote">(Apenas gestores podem alterar. O papel é guardado na coleção <code>users</code>.)</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="aboutView" class="card" style="margin-bottom:24px;">
+      <h3>Como funciona (PWA + Fotos)</h3>
+      <ul>
+        <li>Funciona offline (PWA). Quando voltar a ter internet, os dados sincronizam.</li>
+        <li>Motorista pode anexar até 5 fotos por checklist (salvas no Firebase Storage).</li>
+        <li>Persistência offline do Firestore habilitada.</li>
+      </ul>
+      <div class="footnote">Depois podemos adicionar assinatura touchscreen, PDF e notificações.</div>
+    </section>
+  </div>
+
+  <script type="module">
+    // ====== CONFIGURE AQUI ======
+    const firebaseConfig = {
+      apiKey: "AIzaSyAaSD-_3pLwYyWTQZDXraJu0iVs5qsNZ6A",
+      authDomain: "check-list-caminhao.firebaseapp.com",
+      projectId: "check-list-caminhao",
+      storageBucket: "check-list-caminhao.appspot.com",
+      messagingSenderId: "95977763824",
+      appId: "1:95977763824:web:49a90467c86f06c5792335",
+      measurementId: "G-81V2YJ1CFE"
+    };
+    // =============================
+
+    // SDKs
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { 
+      getAuth, onAuthStateChanged, signInWithEmailAndPassword, 
+      createUserWithEmailAndPassword, signOut 
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    import { 
+      getFirestore, doc, getDoc, setDoc, updateDoc, collection, addDoc, serverTimestamp,
+      query, where, orderBy, limit, getDocs, enableIndexedDbPersistence
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    import {
+      getStorage, ref as storageRef, uploadBytes, getDownloadURL
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    // Offline Firestore
+    enableIndexedDbPersistence(db).catch(()=>{/* alguns navegadores podem não suportar multi-abas */});
+
+    // PWA: registrar SW
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js");
+      });
+    }
+
+    // UI helpers
+    const $ = sel => document.querySelector(sel);
+    const authView = $('#authView');
+    const driverView = $('#driverView');
+    const adminView = $('#adminView');
+    const roleChip = $('#roleChip');
+    const btnSignOut = $('#btnSignOut');
+    const btnInstall = $('#btnInstall');
+
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      btnInstall.style.display = 'inline-flex';
+    });
+    btnInstall.onclick = async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      btnInstall.style.display = 'none';
+    };
+
+    function show(view){
+      [authView, driverView, adminView].forEach(v=>v.classList.add('hide'));
+      view.classList.remove('hide');
+    }
+
+    // Checklist items
+    const CHECK_ITEMS = [
+      'Pneus', 'Freios', 'Luzes', 'Óleo do motor', 'Líquido de arrefecimento', 'Direção', 'Suspensão', 'Extintor', 'Triângulo', 'Estepe', 'Tacógrafo', 'Documentos', 'EPI', 'Vazamentos', 'Painel sem avisos'
+    ];
+
+    // Render switches
+    const checksDiv = document.getElementById('checks');
+    for(const name of CHECK_ITEMS){
+      const id = 'chk_'+name.replace(/[^a-zA-Z0-9]/g,'');
+      const el = document.createElement('div');
+      el.className = 'row';
+      el.innerHTML = `
+        <label style="flex:1">${name}</label>
+        <select id="${id}" class="pill">
+          <option value="OK">OK</option>
+          <option value="ATENÇÃO">ATENÇÃO</option>
+          <option value="REPARO">REPARO</option>
+        </select>`;
+      checksDiv.appendChild(el);
+    }
+
+    // Fotos preview
+    const fotosInput = document.getElementById('fotos');
+    const thumbsDiv = document.getElementById('thumbs');
+    fotosInput.addEventListener('change', () => {
+      thumbsDiv.innerHTML='';
+      const files = [...fotosInput.files].slice(0,5);
+      for(const f of files){
+        const url = URL.createObjectURL(f);
+        const img = new Image();
+        img.src = url;
+        thumbsDiv.appendChild(img);
+      }
+      if(fotosInput.files.length > 5) alert('Serão usadas apenas as 5 primeiras fotos.');
+    });
+
+    // Status quick set
+    let statusAtual = null;
+    const statusLabel = document.getElementById('statusLabel');
+    document.getElementById('btnAprovado').onclick = ()=>{ statusAtual='APROVADO'; statusLabel.textContent='Aprovado'; statusLabel.className='tag tag-ok'; };
+    document.getElementById('btnReprovado').onclick = ()=>{ statusAtual='REPROVADO'; statusLabel.textContent='Reprovado'; statusLabel.className='tag tag-bad'; };
+
+    // Auth actions
+    document.getElementById('btnLogin').onclick = async ()=>{
+      const email = document.getElementById('email').value.trim();
+      const pass = document.getElementById('password').value.trim();
+      if(!email||!pass) return alert('Informe e-mail e senha');
+      try{ await signInWithEmailAndPassword(auth, email, pass); }catch(e){ alert(e.message); }
+    };
+    document.getElementById('btnRegister').onclick = async ()=>{
+      const email = document.getElementById('email').value.trim();
+      const pass = document.getElementById('password').value.trim();
+      if(!email||!pass) return alert('Informe e-mail e senha');
+      try{ await createUserWithEmailAndPassword(auth, email, pass); }catch(e){ alert(e.message); }
+    };
+    btnSignOut.onclick = ()=> signOut(auth);
+
+    // On auth change
+    onAuthStateChanged(auth, async (user)=>{
+      if(!user){
+        roleChip.textContent = 'desconectado';
+        btnSignOut.style.display='none';
+        show(authView);
+        return;
+      }
+      btnSignOut.style.display='inline-flex';
+      // ensure user doc
+      const uref = doc(db, 'users', user.uid);
+      const snap = await getDoc(uref);
+      if(!snap.exists()){
+        await setDoc(uref, { email:user.email||null, role:'driver', createdAt: serverTimestamp() });
+      }
+      const role = (await getDoc(uref)).data().role || 'driver';
+      roleChip.textContent = role;
+      if(role==='admin'){
+        show(adminView);
+        loadAdmin();
+      } else {
+        show(driverView);
+        loadDriverMyList();
+        // defaults
+        const now = new Date();
+        document.getElementById('data').value = now.toISOString().slice(0,10);
+        document.getElementById('hora').value = now.toTimeString().slice(0,5);
+      }
+    });
+
+    // Driver: enviar checklist (com upload de fotos)
+    document.getElementById('btnEnviar').onclick = async ()=>{
+      const user = auth.currentUser; if(!user) return alert('Faça login');
+      const placa = document.getElementById('placa').value.trim().toUpperCase();
+      const hod = Number(document.getElementById('hodometro').value || 0);
+      const data = document.getElementById('data').value; const hora = document.getElementById('hora').value;
+      if(!placa||!data||!hora) return alert('Preencha placa, data e hora');
+      const items = {};
+      for(const name of CHECK_ITEMS){
+        const id = 'chk_'+name.replace(/[^a-zA-Z0-9]/g,'');
+        items[name] = document.getElementById(id).value;
+      }
+      let st = statusAtual;
+      if(!st){ st = Object.values(items).includes('REPARO') ? 'REPROVADO' : 'APROVADO'; }
+      const obs = document.getElementById('obs').value.trim();
+
+      try{
+        // cria doc primeiro
+        const docRef = await addDoc(collection(db,'checklists'), {
+          placa, hodometro: hod, data, hora, items, obs, status: st,
+          driverId: user.uid, driverEmail: user.email || null,
+          photos: [],
+          createdAt: serverTimestamp()
+        });
+
+        // upload de fotos (até 5)
+        const files = [...(fotosInput.files||[])].slice(0,5);
+        const urls = [];
+        for(let i=0;i<files.length;i++){
+          const f = files[i];
+          const path = `checklists/${docRef.id}/${Date.now()}_${i}_${f.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+          const refFile = storageRef(storage, path);
+          await uploadBytes(refFile, f);
+          const url = await getDownloadURL(refFile);
+          urls.push(url);
+        }
+        if(urls.length){
+          await updateDoc(doc(db,'checklists', docRef.id), { photos: urls });
+        }
+
+        alert('Checklist enviado!');
+        statusAtual = null; statusLabel.textContent='A avaliar'; statusLabel.className='';
+        document.getElementById('obs').value='';
+        fotosInput.value = ''; thumbsDiv.innerHTML='';
+        loadDriverMyList();
+      }catch(e){ alert('Erro ao enviar: '+e.message); }
+    };
+
+    async function loadDriverMyList(){
+      const tb = document.querySelector('#myTable tbody'); tb.innerHTML='';
+      const user = auth.currentUser; if(!user) return;
+      const q = query(collection(db,'checklists'), where('driverId','==', user.uid), orderBy('createdAt','desc'), limit(20));
+      const ss = await getDocs(q);
+      ss.forEach(docu=>{
+        const d = docu.data();
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${d.data} ${d.hora||''}</td><td>${d.placa}</td><td><span class="tag ${d.status==='APROVADO'?'tag-ok':'tag-bad'}">${d.status}</span></td><td><button class="btn" data-id="${docu.id}">Ver</button></td>`;
+        tb.appendChild(tr);
+      });
+      tb.onclick = (ev)=>{
+        const id = ev.target?.dataset?.id; if(!id) return;
+        viewDetails(id);
+      }
+    }
+
+    // Admin
+    document.getElementById('btnRefresh').onclick = ()=> loadAdmin();
+    document.getElementById('btnExport').onclick = ()=> exportCSV();
+    document.getElementById('btnSetRole').onclick = async ()=>{
+      const uid = document.getElementById('uidRole').value.trim();
+      const role = document.getElementById('selRole').value;
+      if(!uid) return alert('Informe o UID');
+      try{ await updateDoc(doc(db,'users', uid), { role }); alert('Papel atualizado!'); }
+      catch(e){ if(e.message.includes('No document')){ await setDoc(doc(db,'users', uid), { role }); alert('Usuário criado com papel!'); } else { alert('Erro: '+e.message);} }
+    };
+
+    async function loadAdmin(){
+      const tb = document.querySelector('#adminTable tbody'); tb.innerHTML='';
+      const fPlaca = document.getElementById('fPlaca').value.trim().toUpperCase();
+      const fStatus = document.getElementById('fStatus').value;
+      const q = query(collection(db,'checklists'), orderBy('createdAt','desc'), limit(200));
+      const ss = await getDocs(q);
+      let rows = [];
+      ss.forEach(docu=>{ rows.push({ id:docu.id, ...docu.data() }); });
+      if(fPlaca) rows = rows.filter(r=> (r.placa||'').toUpperCase().includes(fPlaca));
+      if(fStatus) rows = rows.filter(r=> r.status===fStatus);
+
+      const total = rows.length;
+      const aprov = rows.filter(r=> r.status==='APROVADO').length;
+      const reprov = rows.filter(r=> r.status==='REPROVADO').length;
+      document.getElementById('statsRow').innerHTML = `
+        <div class="stat">Total: <b style="margin-left:6px">${total}</b></div>
+        <div class="stat">Aprovados: <b style="margin-left:6px; color:#10b981">${aprov}</b></div>
+        <div class="stat">Reprovados: <b style="margin-left:6px; color:#f87171">${reprov}</b></div>`;
+
+      for(const d of rows){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${d.data||''} ${d.hora||''}</td><td>${d.placa||''}</td><td>${d.driverEmail||''}</td><td><span class="tag ${d.status==='APROVADO'?'tag-ok':'tag-bad'}">${d.status}</span></td><td><button class="btn" data-id="${d.id}">Ver</button></td>`;
+        tb.appendChild(tr);
+      }
+      tb.onclick = (ev)=>{
+        const id = ev.target?.dataset?.id; if(!id) return;
+        viewDetails(id);
+      };
+    }
+
+    async function viewDetails(id){
+      const ref = doc(db,'checklists', id);
+      const snap = await getDoc(ref);
+      if(!snap.exists()) return alert('Registro não encontrado');
+      const d = snap.data();
+      const itemsTxt = Object.entries(d.items||{}).map(([k,v])=>`- ${k}: ${v}`).join('\\n');
+      const photosTxt = (d.photos||[]).map((u,i)=>`Foto ${i+1}: ${u}`).join('\\n');
+      alert(`Checklist ${id}\\n\\nData/Hora: ${d.data||''} ${d.hora||''}\\nPlaca: ${d.placa||''}\\nHodômetro: ${d.hodometro||''}\\nStatus: ${d.status}\\nMotorista: ${d.driverEmail||''}\\n\\nItens:\\n${itemsTxt}\\n\\nObs:\\n${d.obs||''}\\n\\n${photosTxt}`);
+    }
+
+    function exportCSV(){
+      const rows = [["data","hora","placa","hodometro","status","driverEmail",...CHECK_ITEMS,"obs","photos_count"]];
+      document.querySelectorAll('#adminTable tbody tr').forEach(tr=>{
+        const tds = tr.querySelectorAll('td');
+        const datahora = (tds[0]?.innerText||'').split(' ');
+        const placa = tds[1]?.innerText||'';
+        const driver = tds[2]?.innerText||'';
+        const status = tds[3]?.innerText||'';
+        rows.push([datahora[0]||'', datahora[1]||'', placa, '', status, driver, ...CHECK_ITEMS.map(_=>''), '', '']);
+      });
+      const csv = rows.map(r=> r.map(v=> '"'+String(v).replaceAll('"','""')+'"').join(',')).join('\\n');
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement('a'), { href:url, download:'checklists.csv' });
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+  </script>
+
+  <!-- Firestore Security Rules (cole no console do Firebase > Firestore > Rules) -->
+  <!--
+  rules_version = '2';
+  service cloud.firestore {
+    match /databases/{database}/documents {
+      function isSignedIn() { return request.auth != null; }
+      function isAdmin(uid) { return get(/databases/$(database)/documents/users/$(uid)).data.role == 'admin'; }
+
+      match /users/{uid} {
+        allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin(request.auth.uid));
+        allow write: if isSignedIn() && (request.auth.uid == uid || isAdmin(request.auth.uid));
+      }
+
+      match /checklists/{id} {
+        allow create: if isSignedIn();
+        allow read: if isSignedIn() && (resource.data.driverId == request.auth.uid || isAdmin(request.auth.uid));
+        allow update, delete: if isSignedIn() && isAdmin(request.auth.uid);
+      }
+    }
+  }
+  -->
+
+  <!-- Storage Security Rules (cole em Storage > Regras) -->
+  <!--
+  rules_version = '2';
+  service firebase.storage {
+    match /b/{bucket}/o {
+      function isSignedIn() { return request.auth != null; }
+      match /checklists/{docId}/{allPaths=**} {
+        allow read, write: if isSignedIn();
+      }
+    }
+  }
+  -->
+</body>
+</html>
